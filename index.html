@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secret Chat System</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #444;
+        }
+        .view {
+            display: none;
+        }
+        .active {
+            display: block;
+        }
+        input, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .error {
+            color: red;
+            margin: 10px 0;
+        }
+        .success {
+            color: green;
+            margin: 10px 0;
+        }
+        .chat-messages {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #f9f9f9;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            background: #e9e9e9;
+        }
+        .message .sender {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .message .time {
+            font-size: 0.8em;
+            color: #7f8c8d;
+        }
+        .admin-controls {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .user-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .user-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+        }
+        .nav {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+        .nav button {
+            width: auto;
+            padding: 8px 16px;
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            .nav button {
+                padding: 6px 12px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Secret Chat System</h1>
+        
+        <div class="nav">
+            <button onclick="showView('login')">Login</button>
+            <button onclick="showView('register')">Register</button>
+            <button onclick="showView('reset')">Reset Password</button>
+            <button onclick="showView('chat')" id="chatNav" style="display:none;">Chat</button>
+            <button onclick="showView('admin')" id="adminNav" style="display:none;">Admin</button>
+            <button onclick="logout()" id="logoutBtn" style="display:none;">Logout</button>
+        </div>
+        
+        <!-- Login View -->
+        <div id="login" class="view active">
+            <h2>Login</h2>
+            <div id="loginError" class="error"></div>
+            <input type="text" id="loginUsername" placeholder="Username" required>
+            <input type="password" id="loginPassword" placeholder="Password" required>
+            <button onclick="login()">Login</button>
+        </div>
+        
+        <!-- Register View -->
+        <div id="register" class="view">
+            <h2>Register</h2>
+            <div id="registerError" class="error"></div>
+            <div id="registerSuccess" class="success"></div>
+            <input type="text" id="registerUsername" placeholder="Username" required>
+            <input type="password" id="registerPassword" placeholder="Password" required>
+            <input type="password" id="registerConfirmPassword" placeholder="Confirm Password" required>
+            <input type="text" id="registerSecretQuestion" placeholder="Secret Question (for password reset)" required>
+            <input type="text" id="registerSecretAnswer" placeholder="Secret Answer" required>
+            <button onclick="register()">Register</button>
+        </div>
+        
+        <!-- Reset Password View -->
+        <div id="reset" class="view">
+            <h2>Reset Password</h2>
+            <div id="resetError" class="error"></div>
+            <div id="resetSuccess" class="success"></div>
+            <input type="text" id="resetUsername" placeholder="Username" required>
+            <input type="text" id="resetSecretAnswer" placeholder="Answer to your secret question" required>
+            <input type="password" id="resetNewPassword" placeholder="New Password" required>
+            <button onclick="resetPassword()">Reset Password</button>
+        </div>
+        
+        <!-- Chat View -->
+        <div id="chat" class="view">
+            <h2>Secret Chat</h2>
+            <div id="chatError" class="error"></div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <textarea id="chatMessage" placeholder="Type your message here..." rows="3"></textarea>
+            <button onclick="sendMessage()">Send Message</button>
+            <button onclick="loadMessages()">Refresh Messages</button>
+        </div>
+        
+        <!-- Admin View -->
+        <div id="admin" class="view">
+            <h2>Admin Panel</h2>
+            <div id="adminError" class="error"></div>
+            
+            <h3>Users</h3>
+            <div class="user-list" id="userList"></div>
+            
+            <h3>All Messages</h3>
+            <div class="chat-messages" id="adminMessages"></div>
+            
+            <div class="admin-controls">
+                <h3>Admin Actions</h3>
+                <input type="text" id="deleteUser" placeholder="Username to delete">
+                <button onclick="deleteUser()">Delete User</button>
+                <button onclick="deleteAllMessages()">Delete All Messages</button>
+                <input type="text" id="deleteMessagesFromUser" placeholder="Username to delete messages from">
+                <button onclick="deleteMessagesFromUser()">Delete User's Messages</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize data structures if they don't exist
+        if (!localStorage.getItem('users')) {
+            localStorage.setItem('users', JSON.stringify([]));
+        }
+        if (!localStorage.getItem('messages')) {
+            localStorage.setItem('messages', JSON.stringify([]));
+        }
+        if (!localStorage.getItem('adminPassword')) {
+            localStorage.setItem('adminPassword', JSON.stringify('admin123')); // Default admin password
+        }
+
+        // Current user
+        let currentUser = null;
+        let isAdmin = false;
+
+        // DOM elements
+        const views = {
+            login: document.getElementById('login'),
+            register: document.getElementById('register'),
+            reset: document.getElementById('reset'),
+            chat: document.getElementById('chat'),
+            admin: document.getElementById('admin')
+        };
+
+        const chatNav = document.getElementById('chatNav');
+        const adminNav = document.getElementById('adminNav');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        // Show a specific view and hide others
+        function showView(viewName) {
+            for (const view in views) {
+                views[view].classList.remove('active');
+            }
+            views[viewName].classList.add('active');
+        }
+
+        // Clear error messages
+        function clearErrors() {
+            document.querySelectorAll('.error').forEach(el => el.textContent = '');
+            document.querySelectorAll('.success').forEach(el => el.textContent = '');
+        }
+
+        // Login function
+        function login() {
+            clearErrors();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            const users = JSON.parse(localStorage.getItem('users'));
+            const user = users.find(u => u.username === username && u.password === password);
+            
+            if (user) {
+                currentUser = username;
+                
+                // Check if admin (simple check for demo purposes)
+                if (username === 'admin' || password === JSON.parse(localStorage.getItem('adminPassword'))) {
+                    isAdmin = true;
+                    adminNav.style.display = 'inline-block';
+                } else {
+                    isAdmin = false;
+                    adminNav.style.display = 'none';
+                }
+                
+                chatNav.style.display = 'inline-block';
+                logoutBtn.style.display = 'inline-block';
+                showView('chat');
+                loadMessages();
+            } else {
+                document.getElementById('loginError').textContent = 'Invalid username or password';
+            }
+        }
+
+        // Register function
+        function register() {
+            clearErrors();
+            const username = document.getElementById('registerUsername').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerConfirmPassword').value;
+            const secretQuestion = document.getElementById('registerSecretQuestion').value;
+            const secretAnswer = document.getElementById('registerSecretAnswer').value;
+            
+            if (password !== confirmPassword) {
+                document.getElementById('registerError').textContent = 'Passwords do not match';
+                return;
+            }
+            
+            if (password.length < 6) {
+                document.getElementById('registerError').textContent = 'Password must be at least 6 characters';
+                return;
+            }
+            
+            const users = JSON.parse(localStorage.getItem('users'));
+            
+            if (users.some(u => u.username === username)) {
+                document.getElementById('registerError').textContent = 'Username already exists';
+                return;
+            }
+            
+            const newUser = {
+                username,
+                password,
+                secretQuestion,
+                secretAnswer,
+                createdAt: new Date().toISOString()
+            };
+            
+            users.push(newUser);
+            localStorage.setItem('users', JSON.stringify(users));
+            
+            document.getElementById('registerSuccess').textContent = 'Registration successful! You can now login.';
+            document.getElementById('registerUsername').value = '';
+            document.getElementById('registerPassword').value = '';
+            document.getElementById('registerConfirmPassword').value = '';
+            document.getElementById('registerSecretQuestion').value = '';
+            document.getElementById('registerSecretAnswer').value = '';
+            
+            // Auto-switch to login view
+            setTimeout(() => showView('login'), 1500);
+        }
+
+        // Reset password function
+        function resetPassword() {
+            clearErrors();
+            const username = document.getElementById('resetUsername').value;
+            const secretAnswer = document.getElementById('resetSecretAnswer').value;
+            const newPassword = document.getElementById('resetNewPassword').value;
+            
+            const users = JSON.parse(localStorage.getItem('users'));
+            const userIndex = users.findIndex(u => u.username === username);
+            
+            if (userIndex === -1) {
+                document.getElementById('resetError').textContent = 'User not found';
+                return;
+            }
+            
+            if (users[userIndex].secretAnswer !== secretAnswer) {
+                document.getElementById('resetError').textContent = 'Incorrect secret answer';
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                document.getElementById('resetError').textContent = 'Password must be at least 6 characters';
+                return;
+            }
+            
+            users[userIndex].password = newPassword;
+            localStorage.setItem('users', JSON.stringify(users));
+            
+            document.getElementById('resetSuccess').textContent = 'Password reset successfully!';
+            document.getElementById('resetUsername').value = '';
+            document.getElementById('resetSecretAnswer').value = '';
+            document.getElementById('resetNewPassword').value = '';
+            
+            // Auto-switch to login view
+            setTimeout(() => showView('login'), 1500);
+        }
+
+        // Send message function
+        function sendMessage() {
+            if (!currentUser) {
+                document.getElementById('chatError').textContent = 'You must be logged in to send messages';
+                return;
+            }
+            
+            const messageText = document.getElementById('chatMessage').value.trim();
+            
+            if (!messageText) {
+                document.getElementById('chatError').textContent = 'Message cannot be empty';
+                return;
+            }
+            
+            const messages = JSON.parse(localStorage.getItem('messages'));
+            
+            const newMessage = {
+                id: Date.now().toString(),
+                sender: currentUser,
+                text: messageText,
+                timestamp: new Date().toISOString()
+            };
+            
+            messages.push(newMessage);
+            localStorage.setItem('messages', JSON.stringify(messages));
+            
+            document.getElementById('chatMessage').value = '';
+            loadMessages();
+        }
+
+        // Load messages function
+        function loadMessages() {
+            const messages = JSON.parse(localStorage.getItem('messages'));
+            const chatMessagesEl = document.getElementById('chatMessages');
+            const adminMessagesEl = document.getElementById('adminMessages');
+            
+            // Display in chat view
+            chatMessagesEl.innerHTML = '';
+            messages.forEach(msg => {
+                const messageEl = document.createElement('div');
+                messageEl.className = 'message';
+                messageEl.innerHTML = `
+                    <div class="sender">${msg.sender}</div>
+                    <div class="text">${msg.text}</div>
+                    <div class="time">${new Date(msg.timestamp).toLocaleString()}</div>
+                `;
+                chatMessagesEl.appendChild(messageEl);
+            });
+            
+            // Display in admin view
+            if (isAdmin) {
+                adminMessagesEl.innerHTML = '';
+                messages.forEach(msg => {
+                    const messageEl = document.createElement('div');
+                    messageEl.className = 'message';
+                    messageEl.innerHTML = `
+                        <div class="sender">${msg.sender}</div>
+                        <div class="text">${msg.text}</div>
+                        <div class="time">${new Date(msg.timestamp).toLocaleString()}</div>
+                        <button onclick="deleteMessage('${msg.id}')" style="width:auto; padding:2px 5px; font-size:12px;">Delete</button>
+                    `;
+                    adminMessagesEl.appendChild(messageEl);
+                });
+            }
+            
+            // Scroll to bottom
+            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+            if (adminMessagesEl) adminMessagesEl.scrollTop = adminMessagesEl.scrollHeight;
+        }
+
+        // Load users for admin view
+        function loadUsers() {
+            if (!isAdmin) return;
+            
+            const users = JSON.parse(localStorage.getItem('users'));
+            const userListEl = document.getElementById('userList');
+            
+            userListEl.innerHTML = '';
+            users.forEach(user => {
+                const userEl = document.createElement('div');
+                userEl.className = 'user-item';
+                userEl.innerHTML = `
+                    <span>${user.username}</span>
+                    <span>${new Date(user.createdAt).toLocaleDateString()}</span>
+                `;
+                userListEl.appendChild(userEl);
+            });
+        }
+
+        // Delete a message (admin only)
+        function deleteMessage(messageId) {
+            if (!isAdmin) return;
+            
+            let messages = JSON.parse(localStorage.getItem('messages'));
+            messages = messages.filter(msg => msg.id !== messageId);
+            localStorage.setItem('messages', JSON.stringify(messages));
+            loadMessages();
+        }
+
+        // Delete all messages (admin only)
+        function deleteAllMessages() {
+            if (!isAdmin) return;
+            
+            if (confirm('Are you sure you want to delete ALL messages?')) {
+                localStorage.setItem('messages', JSON.stringify([]));
+                loadMessages();
+            }
+        }
+
+        // Delete messages from a specific user (admin only)
+        function deleteMessagesFromUser() {
+            if (!isAdmin) return;
+            
+            const username = document.getElementById('deleteMessagesFromUser').value.trim();
+            if (!username) return;
+            
+            if (confirm(`Are you sure you want to delete ALL messages from ${username}?`)) {
+                let messages = JSON.parse(localStorage.getItem('messages'));
+                messages = messages.filter(msg => msg.sender !== username);
+                localStorage.setItem('messages', JSON.stringify(messages));
+                loadMessages();
+                document.getElementById('deleteMessagesFromUser').value = '';
+            }
+        }
+
+        // Delete a user (admin only)
+        function deleteUser() {
+            if (!isAdmin) return;
+            
+            const username = document.getElementById('deleteUser').value.trim();
+            if (!username) return;
+            
+            if (confirm(`Are you sure you want to delete user ${username} and all their messages?`)) {
+                // Delete user
+                let users = JSON.parse(localStorage.getItem('users'));
+                users = users.filter(u => u.username !== username);
+                localStorage.setItem('users', JSON.stringify(users));
+                
+                // Delete user's messages
+                let messages = JSON.parse(localStorage.getItem('messages'));
+                messages = messages.filter(msg => msg.sender !== username);
+                localStorage.setItem('messages', JSON.stringify(messages));
+                
+                loadUsers();
+                loadMessages();
+                document.getElementById('deleteUser').value = '';
+            }
+        }
+
+        // Logout function
+        function logout() {
+            currentUser = null;
+            isAdmin = false;
+            chatNav.style.display = 'none';
+            adminNav.style.display = 'none';
+            logoutBtn.style.display = 'none';
+            showView('login');
+        }
+
+        // When admin view is shown, load users and messages
+        document.getElementById('admin').addEventListener('click', () => {
+            if (isAdmin) {
+                loadUsers();
+                loadMessages();
+            }
+        });
+
+        // Initialize
+        showView('login');
+    </script>
+</body>
+</html>
